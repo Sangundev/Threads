@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import connectDB from './database/connectDB.js';
 import cookieParser from 'cookie-parser';
 import userRoutes from './routes/userRoutes.js';
+import postRoutes from './routes/postRoutes.js';
+
 
 dotenv.config();
 connectDB();
@@ -18,5 +20,6 @@ app.use(cookieParser());
 
 
 app.use("/api/users", userRoutes);
+app.use("/api/posts",postRoutes);
 
 app.listen(PORT, () => console.log(`Kết nối server http://localhost:${PORT}`));

@@ -1,44 +1,51 @@
 import mongoose from "mongoose";
 
-const userSchema = mongoose.Schema({
+const userSchema = mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     username: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: true,
+      unique: true,
     },
     email: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: true,
+      unique: true,
     },
     password: {
-        type: String,
-        minLength: 6,
-        required: true, // It's a good practice to require the password field
+      type: String,
+      minLength: 6,
+      required: true,
     },
     profilePic: {
-        type: String, // Specify the type for the profile picture (e.g., URL as a String)
-        default: "", // Optionally set a default value
+      type: String,
+      default: "",
     },
     followers: {
-        type: [String],
-        default: [], // Default to an empty array
+      type: [String],
+      default: [],
     },
     following: {
-        type: [String], // Define as an array of Strings for following users
-        default: [], // Default to an empty array
+      type: [String],
+      default: [],
     },
     bio: {
-        type: String, // Define bio as a String
-        default: "", // Optionally set a default value
+      type: String,
+      default: "",
     },
-}, {
-    timestamps: true, // Optional: adds createdAt and updatedAt timestamps
-});
+    isFrozen: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const User = mongoose.model("User", userSchema);
 
