@@ -1,5 +1,5 @@
 import { useRecoilValue } from "recoil"
-import LoginCard from "../components/Login"
+import LoginCard from "../components/LoginCard"
 import SignupCard from "../components/SignupCard"
 import authScreenAtom from "../atoms/AuthAtom"
 
@@ -9,7 +9,7 @@ const AuthPage = () => {
   return (
     <div>
         
-    <LoginCard />
+    {authSreenState === "login" ? <LoginCard /> : <SignupCard />  }
     </div>
   )
 }

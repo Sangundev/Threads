@@ -21,6 +21,6 @@ router.post("/logout", logoutUser);
 //follower/unfollower
 router.post("/follow/:id", protectRoute, follownnfollowUser);
 // update User
-router.post("/update/:id", protectRoute, updateUser);
+router.put("/update/:id", protectRoute, updateUser);
 
 export default router;

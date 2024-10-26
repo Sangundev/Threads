@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/helpers/gennerateTokenAndSetCookie.js";
-
+import { v2 as cloudinary } from "cloudinary";
 //Xem trang cá nhân
 const getUserProfile = async (req, res) => {
   const { username } = req.params;
@@ -81,6 +81,8 @@ const loginUser = async (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      bio: user.bio,
+      profilePic: user.profilePic,
     });
   } catch (error) {
     console.error(error); // In ra lỗi trong console
@@ -151,49 +153,67 @@ const follownnfollowUser = async (req, res) => {
   }
 };
 // Cập nhật thông tin
+// Cập nhật thông tin người dùng
 const updateUser = async (req, res) => {
-  const { name, username, email, profilePic, bio, password } = req.body;
+  const { name, email, username, password, bio } = req.body;
+  let { profilePic } = req.body;
+  const userId = req.user._id;
 
   try {
-    const userId = req.user._id; // Get user ID from the protected route middleware
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "Người dùng không tồn tại" });
 
-    if (!user) {
-      return res.status(404).json({ message: "Người dùng không tồn tại." });
+    // Kiểm tra nếu người dùng muốn cập nhật tài khoản của người khác
+    if (req.params.id !== userId.toString())
+      return res.status(403).json({ error: "Không thể cập nhật tài khoản của người khác" });
+
+    // Cập nhật mật khẩu nếu có
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      user.password = hashedPassword;
     }
 
-    // Update user information
+    // Cập nhật ảnh đại diện nếu có
+    if (profilePic) {
+      // Xóa ảnh cũ nếu có
+      // if (user.profilePic) {
+      //   await cloudinary.uploader.destroy(user.profilePic.split("/").pop().split(".")[0]);
+      // }
+
+      // Tải ảnh mới lên Cloudinary và lấy URL
+      // const uploadedResponse = await cloudinary.uploader.upload(profilePic);
+      // profilePic = uploadedResponse.secure_url;
+
+
+      const uploadedResponse = await cloudinary.uploader.upload(profilePic, {
+        quality: "auto:good", // Giảm chất lượng ảnh tự động
+      });
+      profilePic = uploadedResponse.secure_url; // Lấy URL của ảnh mới
+    }
+
+    // Cập nhật các thông tin khác của người dùng
     user.name = name || user.name;
-    user.username = username || user.username;
     user.email = email || user.email;
+    user.username = username || user.username;
     user.profilePic = profilePic || user.profilePic;
     user.bio = bio || user.bio;
 
-    // Check if a new password is provided
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt); // Hash the new password
-    }
+    await user.save();
 
-    await user.save(); // Save updated user information to the database
+    // Xóa mật khẩu khỏi phản hồi
+    user.password = null;
 
-    // Send a successful response
     res.status(200).json({
-      message: "Cập nhật thông tin người dùng thành công.",
-      user: {
-        _id: user._id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        profilePic: user.profilePic,
-        bio: user.bio,
-      },
+      message: "Cập nhật thông tin người dùng thành công",
+      user
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+    res.status(500).json({ error: "Lỗi máy chủ", details: error.message });
+    console.error("Error in updateUser:", error.message);
   }
 };
+
 
 export {
   signupUser,
