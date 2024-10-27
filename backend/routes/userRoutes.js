@@ -11,7 +11,7 @@ import protectRoute from "../middlewares/protectRoute.js";
 
 const router = express.Router();
 //xem trang cá nhân
-router.get("/profile/:username", getUserProfile);
+router.get("/profile/:query", getUserProfile);
 //SignUp
 router.post("/signup", signupUser);
 // Login

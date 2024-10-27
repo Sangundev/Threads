@@ -2,6 +2,7 @@ import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
 import router from "../routes/postRoutes.js";
 import mongoose from "mongoose";
+import { v2 as cloudinary } from "cloudinary";
 
 // Xem bài viết
 const getPost = async (req, res) => {
@@ -9,15 +10,16 @@ const getPost = async (req, res) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      return res.status(404).json({ error: "Post not found" });
+      return res.status(404).json({ message: "Post not found" });
     }
 
     res.status(200).json(post);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 // Tạo bài viết
+
 const createPost = async (req, res) => {
   try {
     // Extract the data from the request body
@@ -25,9 +27,7 @@ const createPost = async (req, res) => {
 
     // Ensure that required fields are provided
     if (!postedBy || !text) {
-      return res
-        .status(400)
-        .json({ message: "Vui lòng kiểm tra lại thiếu thông tin bắt buộc" });
+      return res.status(400).json({ message: "Vui lòng kiểm tra lại thiếu thông tin bắt buộc" });
     }
 
     const user = await User.findById(postedBy);
@@ -37,36 +37,41 @@ const createPost = async (req, res) => {
 
     // Assuming req.user._id is set from authentication middleware
     if (user._id.toString() !== req.user._id.toString()) {
-      return res
-        .status(401)
-        .json({ message: "Bạn không có quyền tạo bài viết" });
+      return res.status(401).json({ message: "Bạn không có quyền tạo bài viết" });
     }
 
     const maxLength = 500;
     if (text.length > maxLength) {
-      return res
-        .status(400)
-        .json({ message: `Ghi chú quá dài, tối đa ${maxLength} ký tự` });
+      return res.status(400).json({ message: `Ghi chú quá dài, tối đa ${maxLength} ký tự` });
+    }
+
+    let imageUrl = null;
+    if (img) {
+      const uploadedResponse = await cloudinary.uploader.upload(img);
+      imageUrl = uploadedResponse.secure_url;
     }
 
     const newPost = new Post({
-      postedBy, // The user who posted it
-      text, // The text content of the post
-      img, // Optional image URL (if provided)
+      postedBy,
+      text,
+      img: imageUrl,
     });
 
     // Save the post to the database
     const savedPost = await newPost.save();
 
+    // Log the saved post information to the console
+    console.log("Post created successfully:", savedPost);
+
     // Send a successful response with the saved post data
-    res
-      .status(201)
-      .json({ message: "Lưu bài viết thành công", post: savedPost });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+    res.status(201).json({ message: "Lưu bài viết thành công", post: savedPost });
+  } catch (message) {
+    console.message(message);
+    res.status(500).json({ message: "Lỗi máy chủ", details: message.message || message });
   }
 };
+
+
 // Xóa bài viết
 const deletePost = async (req, res) => {
   try {
@@ -82,9 +87,9 @@ const deletePost = async (req, res) => {
     await Post.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: " Xóa bài viết thành công" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  } catch (message) {
+    console.message(message);
+    res.status(500).json({ message: "Lỗi máy chủ", message: message.message });
   }
 };
 // Thích và bỏ thích bài viết
@@ -109,11 +114,11 @@ const likeUnlikePost = async (req, res) => {
       await post.save(); // Save the updated post
       return res.status(200).json({ message: "Thích bài viết thành công" }); // Response for liking
     }
-  } catch (error) {
-    console.error(error); // Log any errors
+  } catch (message) {
+    console.message(message); // Log any messages
     return res
       .status(500)
-      .json({ message: "Lỗi máy chủ", error: error.message }); // Response for server errors
+      .json({ message: "Lỗi máy chủ", message: message.message }); // Response for server messages
   }
 };
 // Bình luận bài viết
@@ -157,9 +162,9 @@ const replyToPost = async (req, res) => {
 
     // Send a successful response
     res.status(201).json({ message: "Phản hồi thành công", reply });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  } catch (message) {
+    console.message(message);
+    res.status(500).json({ message: "Lỗi máy chủ", message: message.message });
   }
 };
 const getFeedPosts = async (req, res) => {
@@ -167,7 +172,7 @@ const getFeedPosts = async (req, res) => {
     const userId = req.user._id;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     const following = user.following;
@@ -178,7 +183,7 @@ const getFeedPosts = async (req, res) => {
 
     res.status(200).json(feedPosts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 

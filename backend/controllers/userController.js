@@ -2,22 +2,33 @@ import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/helpers/gennerateTokenAndSetCookie.js";
 import { v2 as cloudinary } from "cloudinary";
+import mongoose from "mongoose";
 //Xem trang cá nhân
 const getUserProfile = async (req, res) => {
-  const { username } = req.params;
+  const { query } = req.params; // Extract the query parameter from the request
   try {
-    const user = await User.findOne({ username }).select(
-      "-password -updatedAt"
-    );
+    let user;
+
+    // Check if the query is a valid MongoDB ObjectId
+    if (mongoose.Types.ObjectId.isValid(query)) {
+      user = await User.findOne({ _id: query }).select("-password -updatedAt"); // Fetch user by ID
+    } else {
+      user = await User.findOne({ username: query }).select("-password -updatedAt"); // Fetch user by username
+    }
+
+    // If no user is found, return an error message
     if (!user) {
       return res.status(400).json({ message: "Người này không tồn tại" });
     }
-    res.json(user); // Return user data if found
+    
+    // Return the user data if found
+    res.json(user);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message }); // Handle server error
   }
 };
+
 
 //SignUp
 const signupUser = async (req, res) => {

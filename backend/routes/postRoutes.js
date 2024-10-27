@@ -18,8 +18,8 @@ router.post("/create", protectRoute, createPost);
 // Xóa bài viết
 router.delete("/:id", protectRoute, deletePost);
 // Thích và bỏ thích bài viết
-router.post("/like/:id", protectRoute, likeUnlikePost);
+router.put("/like/:id", protectRoute, likeUnlikePost);
 // Bình luận bài viết
-router.post("/reply/:id", protectRoute, replyToPost);
+router.put("/reply/:id", protectRoute, replyToPost);
 
 export default router;

@@ -28,6 +28,7 @@ export default function LoginCard() {
 
   const setAuthScreen = useSetRecoilState(authScreenAtom);
   const setUser = useSetRecoilState(userAtom);
+  const [loading, setloading] = useState(false);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setInputs((prevInputs) => ({
@@ -37,6 +38,7 @@ export default function LoginCard() {
   };
   const showToast = useShowToast();
   const handleLogin = async () => {
+    setloading(true)
     console.log(inputs);
     try {
       const res = await fetch("/api/users/login", {
@@ -50,7 +52,6 @@ export default function LoginCard() {
       if (res.ok) {
         const data = await res.json();
         // Handle successful login (e.g., store token, redirect)
-        console.log(data);
         showToast("Login successful!", "success");
         localStorage.setItem("user-threads",JSON.stringify(data));
         setUser(data);
@@ -61,6 +62,8 @@ export default function LoginCard() {
     } catch (error) {
       console.error("Login error:", error);
       showToast("Unable to login, please try again.", "error");
+    }finally{
+      setloading(false);
     }
   };
 
@@ -105,12 +108,14 @@ export default function LoginCard() {
                 <Text color={"blue.400"}>Forgot password?</Text>
               </Stack>
               <Button
+              loadingText="Đang đăng nhập"
                 bg={useColorModeValue("gray.600", "gray.700")}
                 color={"white"}
                 _hover={{
                   bg: useColorModeValue("gray.700", "gray.800"),
                 }}
                 onClick={handleLogin}
+                isLoading={loading}
               >
                 Sign in
               </Button>
