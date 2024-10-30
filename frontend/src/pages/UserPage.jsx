@@ -1,70 +1,79 @@
 import { useEffect, useState } from "react";
-import UserHeader from "../components/UserHeader"; // Component hiển thị thông tin người dùng
-import UserPost from "../components/UserPost"; // Component hiển thị bài viết của người dùng
-import { useParams } from "react-router-dom"; // Để lấy tham số từ URL
-import useShowToast from "../hooks/useShowToast"; // Custom hook hiển thị thông báo
-import { Flex, Spinner } from "@chakra-ui/react"; // Các component từ Chakra UI
+import UserHeader from "../components/UserHeader"; // Component to display user info
+// import UserPost from "../components/UserPost"; // Component to display user posts
+import { useParams } from "react-router-dom"; // To get parameters from URL
+import useShowToast from "../hooks/useShowToast"; // Custom hook for showing toast notifications
+import { Flex, Spinner } from "@chakra-ui/react"; // Chakra UI components
+import Post from "../components/Post"; // Component to display
+import useGetUserProfile from "../hooks/useGetUserProfile";
+import { useRecoilState } from "recoil";
+import postsAtom from "../atoms/postsAtom";
 
 const UserPage = () => {
-  const [user, setUser] = useState(null); // State để lưu thông tin người dùng
-  const { username } = useParams(); // Lấy username từ URL
-  const showToast = useShowToast(); // Khởi tạo hook hiển thị thông báo
-  const [loading, setLoading] = useState(true); // State để kiểm tra trạng thái tải dữ liệu
+  const {user, loading} = useGetUserProfile();
+  const { username } = useParams(); // Get username from URL
+  const showToast = useShowToast(); // Initialize toast hook
+  const [posts, setPosts] = useRecoilState(postsAtom);
+  const [isFetchingPosts, setIsFetchingPosts] = useState(true); // State for post fetching status
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const res = await fetch(`/api/users/profile/${username}`); // Gửi yêu cầu đến API để lấy thông tin người dùng
-        
-        // Kiểm tra phản hồi có thành công hay không
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
-        }
-        
-        const data = await res.json(); // Phân tích JSON từ phản hồi
-        setUser(data); // Cập nhật state người dùng
 
-        if (data.error) {
-          showToast("Error", data.error, "error"); // Hiển thị thông báo lỗi nếu có
-          return;
-        } else {
-          setUser(data); // Nếu không có lỗi, cập nhật state người dùng
+
+    const getPosts = async () => {
+      setIsFetchingPosts(true);
+      try {
+        const res = await fetch(`/api/posts/user/${username}`);
+
+        // Check if response is successful
+        if (!res.ok) {
+          throw new Error(
+            `Failed to fetch posts: ${res.status} ${res.statusText}`
+          );
         }
+
+        const data = await res.json();
+        console.log(data);
+        setPosts(data); // Set fetched posts
       } catch (error) {
-        console.error("Error fetching user data:", error);
-        showToast("Error", "Failed to fetch user data. Please try again later.", "error"); // Hiển thị thông báo lỗi
+        console.error("Error fetching posts:", error);
+        showToast(
+          "Error",
+          "Failed to fetch posts. Please try again later.",
+          "error"
+        ); // Show error toast
       } finally {
-        setLoading(false); // Đặt loading thành false sau khi hoàn tất
+        setIsFetchingPosts(false); // Set post fetching status to false after completion
       }
     };
 
-    getUser(); // Gọi hàm lấy thông tin người dùng
-  }, [username, showToast]);
-
-  // Kiểm tra trạng thái loading và thông tin người dùng
+    getPosts(); // Call function to fetch posts
+  }, [username, showToast, setPosts]);
+ console.log("posts is here anh it is recoil state" ,posts);
+  // Check loading status and user info
   if (!user && loading) {
     return (
       <Flex justifyContent={"center"}>
-        <Spinner size={"xl"} /> {/* Hiển thị spinner trong khi loading */}
+        <Spinner size={"xl"} /> {/* Show spinner while loading */}
       </Flex>
     );
   }
 
-  if (!user && !loading) return <h1>User not found</h1>; // Nếu không tìm thấy người dùng và không loading
+  if (!user && !loading) return <h1>User not found</h1>; // Show message if user not found
 
   return (
     <>
-      <UserHeader user={user} /> {/* Hiển thị thông tin người dùng */}
-      <UserPost /> {/* Hiển thị bài viết của người dùng */}
-      <UserPost
-        likes={1200}
-        replies={481}
-        postImg="https://as2.ftcdn.net/v2/jpg/05/89/23/21/1000_F_589232168_qNBfxUughDMA6LzlXiIg2e0B3ntCmZbH.jpg"
-        postTile="So the post not is good because her absence"
-      />
-      <UserPost /> {/* Có thể thêm các bài viết khác ở đây */}
-      <UserPost />
-      <UserPost />
+      <UserHeader user={user} /> {/* Display user info */}
+      {!isFetchingPosts && posts.length === 0 && (
+        <h1>Chưa có bài viết nào để hiển thị</h1>
+      )}
+      {isFetchingPosts && (
+        <Flex justifyContent={"center"} my={12}>
+          <Spinner size={"xl"} />
+        </Flex>
+      )}
+      {posts.map((post) => (
+        <Post key={post._id} post={post} postedBy={post.postedBy} />
+      ))}
     </>
   );
 };

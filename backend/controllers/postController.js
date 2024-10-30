@@ -64,7 +64,7 @@ const createPost = async (req, res) => {
     console.log("Post created successfully:", savedPost);
 
     // Send a successful response with the saved post data
-    res.status(201).json({ message: "Lưu bài viết thành công", post: savedPost });
+    res.status(201).json(savedPost);
   } catch (message) {
     console.message(message);
     res.status(500).json({ message: "Lỗi máy chủ", details: message.message || message });
@@ -84,6 +84,12 @@ const deletePost = async (req, res) => {
         .status(401)
         .json({ message: "Bạn không có quyền xóa bài viết" });
     }
+
+    if(post.img){
+      const imgId = post.img.split("/").pop().split(".")[0];
+      await cloudinary.uploader.destroy(imgId);
+    }
+
     await Post.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: " Xóa bài viết thành công" });
@@ -127,8 +133,9 @@ const replyToPost = async (req, res) => {
     const { id: postId } = req.params; // Extract post ID from request parameters
     const { text } = req.body; // Extract reply text from request body
     const userId = req.user._id; // Get user ID from the request object
-    const userProfilePic = req.user.userProfilePic || ""; // Default to empty string if not set
-    const username = req.user.username;
+    const userProfilePic = req.user.profilePic || ""; // Default to empty string if not set
+    const username = req.user.username; // Extract username from request object
+    const name = req.user.name; // Extract name from request object
 
     // Check if reply text is provided
     if (!text) {
@@ -143,14 +150,13 @@ const replyToPost = async (req, res) => {
 
     // Check if username is provided
     if (!username) {
-      return res
-        .status(400)
-        .json({ message: "Tên người dùng không được cung cấp." });
+      return res.status(400).json({ message: "Tên người dùng không được cung cấp." });
     }
 
     // Create a reply object
     const reply = {
       userId, // The ID of the user who is replying
+      name,
       text, // The reply text
       userProfilePic, // User profile picture
       username, // Username of the user
@@ -162,11 +168,12 @@ const replyToPost = async (req, res) => {
 
     // Send a successful response
     res.status(201).json({ message: "Phản hồi thành công", reply });
-  } catch (message) {
-    console.message(message);
-    res.status(500).json({ message: "Lỗi máy chủ", message: message.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
+
 const getFeedPosts = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -186,7 +193,21 @@ const getFeedPosts = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+const getUserPost = async (req, res) => {
+	const { username } = req.params;
+	try {
+		const user = await User.findOne({ username });
+		if (!user) {
+			return res.status(404).json({ error: "User not found" });
+		}
 
+		const posts = await Post.find({ postedBy: user._id }).sort({ createdAt: -1 });
+
+		res.status(200).json(posts);
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+};
 export {
   createPost,
   getPost,
@@ -194,4 +215,5 @@ export {
   likeUnlikePost,
   replyToPost,
   getFeedPosts,
+  getUserPost,
 };

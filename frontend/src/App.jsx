@@ -26,12 +26,21 @@ function App() {
         <Route path="/update" element={user ? <UpdateProfilePage /> : <Navigate to="/auth" />} />
 
         {/* Public routes accessible without authentication */}
-        <Route path="/:username" element={<UserPage />} />
+        <Route path="/:username" element={
+          user ? (
+          <>
+          <UserPage />
+          <CreatePost />
+          </>
+          ) : (
+            <UserPage />
+          )
+        } />
         <Route path="/:username/post/:pid" element={<PostPage />} />
       </Routes>
 
       {user && <LogoutButton />}
-      {user && <CreatePost />}
+     
     </Container>
   );
 }

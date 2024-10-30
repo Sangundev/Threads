@@ -1,4 +1,19 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  FormControl,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  useDisclosure,
+} from "@chakra-ui/react";
 import { useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 import userAtom from "../atoms/userAtom";
@@ -7,42 +22,85 @@ import { useRecoilValue } from "recoil";
 const Actions = ({ post: initialPost }) => {
   const user = useRecoilValue(userAtom);
   const showToast = useShowToast();
-  
+  const { isOpen, onOpen, onClose } = useDisclosure();
   // Initialize state
   const [post, setPost] = useState(initialPost);
   const [liked, setLiked] = useState(initialPost.likes.includes(user?._id));
-
+  const [isliking, setisliking] = useState(false);
+  const [replies, setreplies] = useState("");
+const [isreply, setisreply] = useState("");
   const handleLikeAndUnlike = async () => {
     if (!user) {
-      return showToast("Error", "You must be logged in to like a post", 'error');
+      return showToast(
+        "Error",
+        "You must be logged in to like a post",
+        "error"
+      );
     }
-    
+    if (isliking) return;
+    setisliking(true);
     try {
       const res = await fetch(`/api/posts/like/${post._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
       });
 
       const data = await res.json();
 
+      console.log(data);
+
       if (data.error) {
-        return showToast("Error", data.error, 'error');
+        return showToast("Error", data.error, "error");
       }
 
       // Update likes state
       setPost((prevPost) => {
-        const newLikes = liked 
-          ? prevPost.likes.filter((id) => id !== user._id) 
+        const newLikes = liked
+          ? prevPost.likes.filter((id) => id !== user._id)
           : [...prevPost.likes, user._id];
-        
+
         return { ...prevPost, likes: newLikes };
       });
       setLiked(!liked);
     } catch (error) {
       showToast("Error", error.message || "Something went wrong", "error");
+    } finally {
+      setisliking(false);
     }
   };
-
+  const handlereplies = async () => {
+   
+    if (!user) {
+      return showToast(
+        "Error",
+        "You must be logged in to replies a post",
+        "error"
+      );
+     
+    }
+    if(isreply) return;
+    setreplies(true);
+    try {
+      const res = await fetch("/api/posts/reply/" + post._id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: replies }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        return showToast("Error", data.error, "error");
+      }
+      setPost({ ...post, replies: [...post.replies, data.replies] });
+      showToast("Success", data.success, "success");
+      console.log(data.success);
+      onClose();
+     setreplies("");
+    } catch (error) {
+      showToast("Error", error.message || "Something went wrong", "error");
+    }finally {
+      setisreply(false);
+    }
+  };
   return (
     <Flex flexDirection="column">
       <Flex gap={3} my={2} onClick={(e) => e.preventDefault()}>
@@ -71,6 +129,7 @@ const Actions = ({ post: initialPost }) => {
           role="img"
           viewBox="0 0 24 24"
           width="20"
+          onClick={onOpen}
         >
           <title>Comment</title>
           <path
@@ -79,6 +138,7 @@ const Actions = ({ post: initialPost }) => {
             stroke="currentColor"
             strokeLinejoin="round"
             strokeWidth="2"
+          
           ></path>
         </svg>
 
@@ -93,6 +153,34 @@ const Actions = ({ post: initialPost }) => {
         <Box w={1} h={1} borderRadius="full" bg="gray.500"></Box>
         <Text color="gray.500">{post.likes.length} likes</Text>
       </Flex>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader></ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl>
+              <Input
+                placeholder="Reply go here ..."
+                value={replies}
+                onChange={(e) => setreplies(e.target.value)}
+              />
+            </FormControl>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              size={"sm"}
+              onClick={handlereplies}
+              isLoading={isreply}
+            >
+              Reply
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Flex>
   );
 };
@@ -111,9 +199,7 @@ const RepostSVG = () => {
       width="20"
     >
       <title>Repost</title>
-      <path
-        d="M19.998 9.497a1 1 0 0 0-1 1v4.228a3.274 3.274 0 0 1-3.27 3.27h-5.313l1.791-1.787a1 1 0 0 0-1.412-1.416L7.29 18.287a1.004 1.004 0 0 0-.294.707v.001c0 .023.012.042.013.065a.923.923 0 0 0 .281.643l3.502 3.504a1 1 0 0 0 1.414-1.414l-1.797-1.798h5.318a5.276 5.276 0 0 0 5.27-5.27v-4.228a1 1 0 0 0-1-1Zm-6.41-3.496-1.795 1.795a1 1 0 1 0 1.414 1.414l3.5-3.5a1.003 1.003 0 0 0 0-1.417l-3.5-3.5a1 1 0 0 0-1.414 1.414l1.794 1.794H8.27A5.277 5.277 0 0 0 3 9.271V13.5a1 1 0 0 0 2 0V9.271a3.275 3.275 0 0 1 3.271-3.27Z"
-      ></path>
+      <path d="M19.998 9.497a1 1 0 0 0-1 1v4.228a3.274 3.274 0 0 1-3.27 3.27h-5.313l1.791-1.787a1 1 0 0 0-1.412-1.416L7.29 18.287a1.004 1.004 0 0 0-.294.707v.001c0 .023.012.042.013.065a.923.923 0 0 0 .281.643l3.502 3.504a1 1 0 0 0 1.414-1.414l-1.797-1.798h5.318a5.276 5.276 0 0 0 5.27-5.27v-4.228a1 1 0 0 0-1-1Zm-6.41-3.496-1.795 1.795a1 1 0 1 0 1.414 1.414l3.5-3.5a1.003 1.003 0 0 0 0-1.417l-3.5-3.5a1 1 0 0 0-1.414 1.414l1.794 1.794H8.27A5.277 5.277 0 0 0 3 9.271V13.5a1 1 0 0 0 2 0V9.271a3.275 3.275 0 0 1 3.271-3.27Z"></path>
     </svg>
   );
 };

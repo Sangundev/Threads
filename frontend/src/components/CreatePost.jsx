@@ -21,9 +21,10 @@ import {
 import { useRef, useState } from "react";
 import usePreviewImg from "../hooks/usePreviewing"; // Assuming this is your custom hook
 import { BsFillImageFill } from "react-icons/bs";
-import { useRecoilValue } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 import userAtom from "../atoms/userAtom";
 import useShowToast from "../hooks/useShowToast";
+import postsAtom from "../atoms/postsAtom";
 const MAX_CHAR = 500;
 const CreatePost = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -34,6 +35,7 @@ const CreatePost = () => {
   const user = useRecoilValue(userAtom);
   const showToast = useShowToast();
   const [ loading,setLoading] = useState();
+  const [posts, setPosts] = useRecoilState(postsAtom);
   const handleTextChange = (e) => {
     const inputText = e.target.value;
     if (inputText.length > MAX_CHAR) {
@@ -66,6 +68,7 @@ const CreatePost = () => {
             "Post created successfully",
             "success"
           );
+          setPosts([data,...posts]);
           onClose();
           setPostText("");
           setImgUrl("");
@@ -81,12 +84,11 @@ const CreatePost = () => {
       <Button
         position={"fixed"}
         bottom={10}
-        right={10}
-        leftIcon={<AddIcon />}
+        right={5}
         bg={useColorModeValue("gray.300", "gray.dark")}
         onClick={onOpen}
-      >
-        Post
+        size={{base: "sm" ,sm: "md"}}
+      ><AddIcon />
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose}>
