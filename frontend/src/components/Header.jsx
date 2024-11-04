@@ -7,6 +7,8 @@ import { Link as RouterLink } from "react-router-dom";
 import { FiLogOut } from "react-icons/fi";
 import useLogout from "../hooks/useLogout";
 import authScreenAtom from "../atoms/AuthAtom";
+import { BsFillChatQuoteFill} from "react-icons/bs"
+
 
 const Header = () => {
   const { colorMode, toggleColorMode } = useColorMode(); // Lấy trạng thái màu và hàm chuyển đổi màu
@@ -41,7 +43,10 @@ const Header = () => {
       {user && (
         <Flex alignItems={"center"} gap={4}>
           <Link as={RouterLink} to={`/${user.username}`}>
-            <RxAvatar size={24} /> {/* Biểu tượng trang cá nhân */}
+            <RxAvatar size={24} /> 
+          </Link>
+          <Link as={RouterLink} to={`/chat`}>
+            <BsFillChatQuoteFill size={20} /> 
           </Link>
           <Button size={"xs"} onClick={logout}>
             <FiLogOut size={"20px"} /> {/* Removed extra 'zz' */}
