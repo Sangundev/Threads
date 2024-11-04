@@ -15,22 +15,22 @@ import { useRecoilState } from "recoil";
 import userAtom from "../atoms/userAtom";
 import usePreviewImg from "../hooks/usePreviewing";
 import useShowToast from "../hooks/useShowToast";
-import { useNavigate } from "react-router-dom";
+
 
 export default function UpdateProfilePage() {
   const [user, setUser] = useRecoilState(userAtom);
   const [inputs, setInputs] = useState({
-    name: user.name || "",
-    username: user.username || "",
-    email: user.email || "",
-    bio: user.bio || "",
+    name: user.name ,
+    username: user.username,
+    email: user.email ,
+    bio: user.bio ,
     password: "",
   });
   const showToast = useShowToast();
-  const fileRef = useRef();
+  const fileRef = useRef(null);
   const [updating,setUpdating] = useState(false); //
   const { handleImageChange, imgUrl } = usePreviewImg();
-  const navigate = useNavigate(); 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if(updating) return ;
@@ -47,11 +47,12 @@ export default function UpdateProfilePage() {
       const data = await res.json();  
      if (data.error) {
       showToast("Error updating",data.message,"error");
+      return;
     }
     showToast("Success","Profile update successfuly","success");
     setUser(data);
     localStorage.setItem("user-threads",JSON.stringify(data));
-    navigate(`/${user.username}`);
+    
     } catch (error) {
       showToast("Error", error, "error");
     }finally{
@@ -62,10 +63,10 @@ export default function UpdateProfilePage() {
   const handleCancel = () => {
     // Implement any logic to reset or redirect
     setInputs({
-      name: user.name || "",
-      username: user.username || "",
-      email: user.email || "",
-      bio: user.bio || "",
+      name: user.name ,
+      username: user.username,
+      email: user.email ,
+      bio: user.bio ,
       password: "",
     });
     // Optionally navigate away or display a message

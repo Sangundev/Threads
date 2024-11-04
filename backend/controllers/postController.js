@@ -130,49 +130,49 @@ const likeUnlikePost = async (req, res) => {
 // Bình luận bài viết
 const replyToPost = async (req, res) => {
   try {
-    const { id: postId } = req.params; // Extract post ID from request parameters
-    const { text } = req.body; // Extract reply text from request body
-    const userId = req.user._id; // Get user ID from the request object
-    const userProfilePic = req.user.profilePic || ""; // Default to empty string if not set
-    const username = req.user.username; // Extract username from request object
-    const name = req.user.name; // Extract name from request object
+    const { id: postId } = req.params; // Lấy ID bài viết từ tham số
+    const { text } = req.body; // Lấy nội dung phản hồi từ body
+    const userId = req.user._id; // Lấy ID người dùng từ yêu cầu
+    const username = req.user.username; // Lấy username từ yêu cầu
 
-    // Check if reply text is provided
+    // Kiểm tra xem phản hồi có được cung cấp hay không
     if (!text) {
       return res.status(400).json({ message: "Chưa nhập phản hồi" });
     }
 
-    // Check if the post exists
+    // Kiểm tra xem bài viết có tồn tại hay không
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ message: "Bài viết không tồn tại" });
     }
 
-    // Check if username is provided
-    if (!username) {
-      return res.status(400).json({ message: "Tên người dùng không được cung cấp." });
+    // Tìm người dùng dựa trên userId
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
     }
 
-    // Create a reply object
+    // Tạo một đối tượng phản hồi
     const reply = {
-      userId, // The ID of the user who is replying
-      name,
-      text, // The reply text
-      userProfilePic, // User profile picture
-      username, // Username of the user
+      userId, // ID người dùng đang phản hồi
+      name: user.name, // Lấy tên người dùng từ đối tượng user
+      text, // Nội dung phản hồi
+      userProfilePic: user.profilePic || "", // Ảnh đại diện của người dùng
+      username, // Username của người dùng
     };
 
-    // Push the new reply into the post's replies array
+    // Thêm phản hồi vào mảng replies của bài viết
     post.replies.push(reply);
-    await post.save(); // Save the updated post
+    await post.save(); // Lưu bài viết đã cập nhật
 
-    // Send a successful response
-    res.status(201).json({ message: "Phản hồi thành công", reply });
+    // Gửi phản hồi thành công
+    res.status(201).json(reply);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
+
 
 const getFeedPosts = async (req, res) => {
   try {

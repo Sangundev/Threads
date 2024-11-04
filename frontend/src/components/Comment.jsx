@@ -10,7 +10,7 @@ const Comment = ({ reply ,lastReply}) => {
         <Flex gap={1} w={"full"} flexDirection={"column"}>
           <Flex w={"full"} justifyContent={"space-between"} align={"center"}>
             <Text fontSize="sm" fontWeight="bold">
-              {reply.username}
+              {reply.name}
             </Text>
             
           </Flex>

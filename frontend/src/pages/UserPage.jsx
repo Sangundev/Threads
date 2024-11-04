@@ -17,8 +17,6 @@ const UserPage = () => {
   const [isFetchingPosts, setIsFetchingPosts] = useState(true); // State for post fetching status
 
   useEffect(() => {
-
-
     const getPosts = async () => {
       setIsFetchingPosts(true);
       try {
@@ -35,12 +33,7 @@ const UserPage = () => {
         console.log(data);
         setPosts(data); // Set fetched posts
       } catch (error) {
-        console.error("Error fetching posts:", error);
-        showToast(
-          "Error",
-          "Failed to fetch posts. Please try again later.",
-          "error"
-        ); // Show error toast
+        showToast('Failed to fetch posts',error.message,"error");
       } finally {
         setIsFetchingPosts(false); // Set post fetching status to false after completion
       }

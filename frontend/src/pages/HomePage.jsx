@@ -2,15 +2,18 @@ import { Flex, Spinner } from "@chakra-ui/react"; // Nhập các component từ 
 import { useEffect, useState } from "react"; // Nhập các hook từ Reactimport { Link } from "react-router-dom"; // Nhập Link để điều hướng
 import useShowToast from "../hooks/useShowToast"; // Hook để hiển thị thông báo
 import Post from "../components/Post";
+import { useRecoilState } from "recoil";
+import postsAtom from "../atoms/postsAtom";
 
 const HomePage = () => {
-  const [posts, setPosts] = useState([]); // State để lưu danh sách bài viết
+  const [posts, setPosts] = useRecoilState(postsAtom); // State để lưu danh sách bài viết
   const [loading, setLoading] = useState(true); // State để theo dõi trạng thái loading
   const showToast = useShowToast(); // Khởi tạo hook hiển thị thông báo
 
   useEffect(() => {
     const fetchPosts = async () => { // Hàm bất đồng bộ để lấy bài viết
       setLoading(true); // Bắt đầu loading
+      setPosts([]);
       try {
         const res = await fetch("/api/posts/feed"); // Gửi yêu cầu đến API
         const data = await res.json(); // Phân tích phản hồi JSON
@@ -29,7 +32,7 @@ const HomePage = () => {
     };
 
     fetchPosts(); // Gọi hàm lấy bài viết
-  }, [showToast]); // Chỉ gọi một lần khi component được mount
+  }, [showToast,setPosts]); // Chỉ gọi một lần khi component được mount
 
   return (
    <>

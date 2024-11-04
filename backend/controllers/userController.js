@@ -1,31 +1,37 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
+import Post from "../models/postModel.js";
 import generateTokenAndSetCookie from "../utils/helpers/gennerateTokenAndSetCookie.js";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 //Xem trang cá nhân
 const getUserProfile = async (req, res) => {
-  const { query } = req.params; // Extract the query parameter from the request
+  const { query } = req.params;
   try {
     let user;
-
-    // Check if the query is a valid MongoDB ObjectId
+    
     if (mongoose.Types.ObjectId.isValid(query)) {
-      user = await User.findOne({ _id: query }).select("-password -updatedAt"); // Fetch user by ID
+      user = await User.findOne({ _id: query }).select("-password -updatedAt");
     } else {
-      user = await User.findOne({ username: query }).select("-password -updatedAt"); // Fetch user by username
+      user = await User.findOne({ username: query }).select("-password -updatedAt");
     }
 
-    // If no user is found, return an error message
     if (!user) {
       return res.status(400).json({ message: "Người này không tồn tại" });
     }
-    
-    // Return the user data if found
-    res.json(user);
+
+    // Check if the current user follows the fetched profile
+    const isFollowing = req.user ? user.followers.includes(req.user._id) : false;
+    // console.log(isFollowing);
+    res.json({
+      ...user.toObject(),
+      isFollowing,  // Return following status
+      followersCount: user.followers.length,  // Total followers
+      followingCount: user.following.length,  // Total following
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Lỗi máy chủ", error: error.message }); // Handle server error
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
 
@@ -182,21 +188,17 @@ const updateUser = async (req, res) => {
     if (password) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      user.password = hashedPassword;
+      user.password = hashedPassword; // Cập nhật mật khẩu đã được mã hóa
     }
 
     // Cập nhật ảnh đại diện nếu có
     if (profilePic) {
-      // Xóa ảnh cũ nếu có
+      // Nếu có ảnh cũ, xóa nó (bình luận lại để xử lý xóa nếu cần)
       // if (user.profilePic) {
       //   await cloudinary.uploader.destroy(user.profilePic.split("/").pop().split(".")[0]);
       // }
 
-      // Tải ảnh mới lên Cloudinary và lấy URL
-      // const uploadedResponse = await cloudinary.uploader.upload(profilePic);
-      // profilePic = uploadedResponse.secure_url;
-
-
+      // Tải ảnh mới lên Cloudinary
       const uploadedResponse = await cloudinary.uploader.upload(profilePic, {
         quality: "auto:good", // Giảm chất lượng ảnh tự động
       });
@@ -204,26 +206,44 @@ const updateUser = async (req, res) => {
     }
 
     // Cập nhật các thông tin khác của người dùng
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.username = username || user.username;
-    user.profilePic = profilePic || user.profilePic;
-    user.bio = bio || user.bio;
+    user.name = name || user.name; // Cập nhật tên nếu có
+    user.email = email || user.email; // Cập nhật email nếu có
+    user.username = username || user.username; // Cập nhật username nếu có
+    user.profilePic = profilePic || user.profilePic; // Cập nhật ảnh đại diện nếu có
+    user.bio = bio || user.bio; // Cập nhật bio nếu có
 
-    await user.save();
+    await user.save(); // Lưu thông tin người dùng đã cập nhật
+
+    // Cập nhật thông tin trong các bài viết mà người dùng đã bình luận
+    await Post.updateMany(
+      {
+        "replies.userId": userId
+      },
+      {
+        $set: {
+          "replies.$[reply].username": user.username,
+          "replies.$[reply].userProfilePic": user.profilePic,
+          "replies.$[reply].name": user.name,
+        }
+      },
+      {
+        arrayFilters: [{ "reply.userId": userId }] // Thêm arrayFilters để chỉ cập nhật các reply của user hiện tại
+      }
+    );
 
     // Xóa mật khẩu khỏi phản hồi
     user.password = null;
 
-    res.status(200).json({
-      message: "Cập nhật thông tin người dùng thành công",
+    // Gửi phản hồi thành công
+    res.status(200).json(
       user
-    });
+    );
   } catch (error) {
-    res.status(500).json({ error: "Lỗi máy chủ", details: error.message });
     console.error("Error in updateUser:", error.message);
+    res.status(500).json({ error: "Lỗi máy chủ", details: error.message });
   }
 };
+
 
 
 export {
