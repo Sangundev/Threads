@@ -13,7 +13,37 @@ import {
 import Conversation from "../components/Conversation";
 import MessageContainer from "../components/MessageContainer";
 
+import useShowToast from "../hooks/useShowToast";
+import { useEffect, useState } from "react";
+import { useRecoilState } from "recoil";
+import conversationsAtom from "../atoms/messageAtom";
+
 const ChatPage = () => {
+  const showToast = useShowToast();
+  const [loadingconversations, setLoadingconversations] = useState(true);
+  const [conversations, setConversations] = useRecoilState(conversationsAtom);
+
+  useEffect(() => {
+    const getConversations = async () => {
+      try {
+        const res = await fetch("/api/messages/conversations");
+        const data = await res.json();
+        if (data.error) {
+          showToast("Error", data.error, "error");
+          return;
+        }
+        console.log(data);
+        setConversations(data);
+      } catch (error) {
+        showToast("Error", error.message, "error");
+      } finally {
+        setLoadingconversations(false);
+      }
+    };
+
+    getConversations();
+  }, [showToast, setConversations]);
+
   return (
     <Box
       position={"absolute"}
@@ -23,7 +53,7 @@ const ChatPage = () => {
         md: "80%",
         lg: "750px",
       }}
-      p={4}
+      // p={-2}
       transform={"translateX(-50%)"}
     >
       <Flex
@@ -63,7 +93,7 @@ const ChatPage = () => {
             </Flex>
           </form>
 
-          {false &&
+          {loadingconversations &&
             [0, 1, 2, 3, 4, 5].map((_, i) => (
               <Flex key={i} alignItems="center" gap={4} borderRadius={"md"}>
                 <Box>
@@ -76,11 +106,13 @@ const ChatPage = () => {
               </Flex>
             ))}
 
-            <Conversation />
-            <Conversation />
-            <Conversation />
-            <Conversation />
-
+          {!loadingconversations &&
+            conversations.map((conversation) => (
+              <Conversation
+                key={conversation._id}
+                conversation={conversation}
+              />
+            ))}
         </Flex>
 
         {/* <Flex

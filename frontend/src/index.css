@@ -23,3 +23,9 @@
 ::-webkit-scrollbar-thumb {
     background-color: #555;
 }
+.truncate {
+    white-space: nowrap;          /* Không cho phép xuống dòng */
+    overflow: hidden;             /* Ẩn phần văn bản bị tràn */
+    text-overflow: ellipsis;      /* Hiển thị dấu ba chấm (...) nếu bị tràn */
+  }
+  

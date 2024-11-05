@@ -3,6 +3,9 @@ import Message from './Message';
 import MessageInput from './MessageInput';
 
 const MessageContainer = () => {
+
+
+  
   return (
     <Flex 
       flex={70}

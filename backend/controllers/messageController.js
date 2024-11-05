@@ -9,6 +9,7 @@ async function sendMessage(req, res) {
     const { recipientId, message } = req.body;
     const senderId = req.user._id;
 
+    
     // Find an existing conversation between sender and recipient
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, recipientId] }
@@ -83,17 +84,25 @@ async function getMessage(req, res) {
 }
 
 // hiện cuộc hội thoại
+// Hiển thị các cuộc hội thoại
 async function getConversation(req, res) {
-    const userId = req.user._id;
-    try {
-        const conversations = await Conversation.find({participants: userId}).populate({
-            path: "participants",
-            select: "username profilePic",
-        })
+  const userId = req.user._id;
+  try {
+      const conversations = await Conversation.find({ participants: userId }).populate({
+          path: "participants",
+          select: "name profilePic",
+      });
 
-        res.status(200).json(conversations);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+      conversations.forEach((conversation) => {
+          conversation.participants = conversation.participants.filter(
+              (participant) => participant._id.toString() !== userId.toString()
+          );
+      });
+
+      res.status(200).json(conversations);
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
 }
+
 export { sendMessage, getMessage, getConversation};
