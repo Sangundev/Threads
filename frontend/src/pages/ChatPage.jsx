@@ -9,19 +9,30 @@ import {
   SkeletonCircle,
   Skeleton,
 } from "@chakra-ui/react";
-// import {GiConversation} from "react-icons/gi";
+import { GiConversation } from "react-icons/gi";
 import Conversation from "../components/Conversation";
 import MessageContainer from "../components/MessageContainer";
 
 import useShowToast from "../hooks/useShowToast";
 import { useEffect, useState } from "react";
-import { useRecoilState } from "recoil";
-import conversationsAtom from "../atoms/messageAtom";
+import { useRecoilState, useRecoilValue } from "recoil";
+import {
+  conversationsAtom,
+  selectedConversationAtom,
+} from "../atoms/messageAtom";
+import userAtom from "../atoms/userAtom";
 
 const ChatPage = () => {
   const showToast = useShowToast();
   const [loadingconversations, setLoadingconversations] = useState(true);
   const [conversations, setConversations] = useRecoilState(conversationsAtom);
+  const [selectedConversation, setselectedConversation] = useRecoilState(
+    selectedConversationAtom
+  );
+  const [seachText, setSeachText] = useState("");
+  const [seachingUser, setSeachingUser] = useState(false);
+  const currentUser = useRecoilValue(userAtom);
+
 
   useEffect(() => {
     const getConversations = async () => {
@@ -40,9 +51,83 @@ const ChatPage = () => {
         setLoadingconversations(false);
       }
     };
-
+   
     getConversations();
   }, [showToast, setConversations]);
+
+
+  const handleconversationSearch = async (e) => {
+  e.preventDefault();
+  setSeachingUser(true);
+  try {
+    // Sanitize input (optional: depending on your use case)
+    const trimmedSearchText = seachText.trim();
+    if (!trimmedSearchText) {
+      showToast("Err", "Please enter a valid username", "Err");
+      return;
+    }
+
+    const res = await fetch(`/api/users/profile/${trimmedSearchText}`);
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch user profile');
+    }
+
+    const seachedUser = await res.json();
+
+    if (seachedUser.error) {
+      showToast("Err", seachedUser.error, "Err");
+      return;
+    }
+
+    const messagingYourself = seachedUser._id === currentUser._id;
+    if (messagingYourself) {
+      showToast("Err", "You cannot message yourself", "Err");
+      return;
+    }
+
+    // Check if the conversation already exists
+    const conversationAlreadyExists = conversations.find(conversation =>
+      conversation.participants.some(participant => participant._id === seachedUser._id)
+    );
+
+    if (conversationAlreadyExists) {
+      setselectedConversation({
+        _id: conversationAlreadyExists._id,
+        userId: seachedUser._id,
+        name: seachedUser.name,
+        username: seachedUser.username,
+        userProfilePic: seachedUser.profilePic,
+      });
+      return;
+    }
+
+    // Create mock conversation if none exists
+    const mockConversation = {
+      mock: true,
+      lastMessage: {
+        text: "",
+        sender: "",
+      },
+      _id: Date.now(),
+      participants: [
+        {
+          _id: seachedUser._id,
+          username: seachedUser.username,
+          name: seachedUser.name,
+          profilePic: seachedUser.profilePic,
+        }
+      ]
+    };
+
+    setConversations((prevConvs) => [...prevConvs, mockConversation]);
+
+  } catch (error) {
+    showToast("Err", error.message || error, "Err");
+  } finally {
+    setSeachingUser(false);
+  }
+};
 
   return (
     <Box
@@ -84,10 +169,13 @@ const ChatPage = () => {
           >
             Your Conversation
           </Text>
-          <form>
+          <form onSubmit={handleconversationSearch}>
             <Flex alignItems={"center"} gap={2}>
-              <Input placeholder="Tìm kiếm người dùng... " />
-              <Button>
+              <Input
+                placeholder="Tìm kiếm người dùng... "
+                onChange={(e) => setSeachText(e.target.value)}
+              />
+              <Button size={"sm"} onClick={handleconversationSearch} isLoading={seachingUser}>
                 <SearchIcon />
               </Button>
             </Flex>
@@ -114,20 +202,21 @@ const ChatPage = () => {
               />
             ))}
         </Flex>
-
-        {/* <Flex
-        flex={70}
-        borderRadius={"md"}
-        p={2}
-        flexDir={"column"}
-        alignItems={"center"}
-        justifyContent={"center"}
-        height={"400px"}
-        >
+        {!selectedConversation._id && (
+          <Flex
+            flex={70}
+            borderRadius={"md"}
+            p={2}
+            flexDir={"column"}
+            alignItems={"center"}
+            justifyContent={"center"}
+            height={"400px"}
+          >
             <GiConversation size={100} />
             <Text fontSize={20}>Chọn người để mở đoạn chat</Text>
-        </Flex> */}
-        <MessageContainer />
+          </Flex>
+        )}
+        {selectedConversation._id && <MessageContainer />}
       </Flex>
     </Box>
   );
