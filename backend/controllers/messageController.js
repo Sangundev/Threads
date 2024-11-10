@@ -90,7 +90,7 @@ async function getConversation(req, res) {
   try {
       const conversations = await Conversation.find({ participants: userId }).populate({
           path: "participants",
-          select: "name profilePic",
+          select: "name username profilePic",
       });
 
       conversations.forEach((conversation) => {

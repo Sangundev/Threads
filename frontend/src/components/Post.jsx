@@ -5,7 +5,7 @@ import Actions from "./Actions";
 import { useEffect, useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 import { formatDistanceToNow } from "date-fns";
-import {DeleteIcon} from "@chakra-ui/icons"
+import { DeleteIcon } from "@chakra-ui/icons";
 import { useRecoilState, useRecoilValue } from "recoil";
 import userAtom from "../atoms/userAtom";
 import postsAtom from "../atoms/postsAtom";
@@ -33,34 +33,29 @@ const Post = ({ post, postedBy }) => {
       }
     };
     getUser();
-
-    
   }, [postedBy, showToast]);
 
   const handleDeletePost = async (e) => {
     try {
       e.preventDefault();
-      if(!window.confirm("Are you sure you want to delete") ) return;
+      if (!window.confirm("Are you sure you want to delete")) return;
 
-      const res = await fetch(`/api/posts/${post._id}`,{
-        method: 'DELETE',
+      const res = await fetch(`/api/posts/${post._id}`, {
+        method: "DELETE",
       });
 
       const data = await res.json();
-      if(data.error){
+      if (data.error) {
         showToast("Error", data.message, "error");
       }
       showToast("Delete post successfully deleted", data.message, "success");
       setPosts((prev) => prev.filter((p) => p._id !== post._id));
-
     } catch (error) {
       showToast("Error", error.message, "error");
     }
-  }
+  };
 
   if (!user) return null;
-
-
 
   return (
     <Link to={`/${user.username}/post/${post._id}`}>
@@ -121,7 +116,9 @@ const Post = ({ post, postedBy }) => {
                 {formatDistanceToNow(new Date(post.createdAt))} ago
               </Text>
 
-                {currentUser?._id == user._id && <DeleteIcon size={20} onClick={handleDeletePost} />}
+              {currentUser?._id == user._id && (
+                <DeleteIcon size={20} onClick={handleDeletePost} />
+              )}
             </Flex>
           </Flex>
           <Text fontSize={"sm"}>{post.text}</Text>
@@ -132,9 +129,17 @@ const Post = ({ post, postedBy }) => {
               border={"1px solid"}
               borderColor={"gray.200"}
             >
-              <Image src={post.img} w={"full"} />
+              {post.img.endsWith(".mp4") ? (
+                <video controls width="100%">
+                  <source src={post.img} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <Image src={post.img} w={"full"} />
+              )}
             </Box>
           )}
+
           <Flex gap={3} my={1}>
             <Actions post={post} />
           </Flex>

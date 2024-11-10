@@ -28,10 +28,10 @@ const PostPage = () => {
   // const [post, setPost] = useState(null);
   const showToast = useShowToast();
   const { pid } = useParams();
-  const [posts,setPosts] = useRecoilState(postsAtom);
+  const [posts, setPosts] = useRecoilState(postsAtom);
   const currentUser = useRecoilValue(userAtom);
   const navigate = useNavigate();
-const currentPost = posts[0];
+  const currentPost = posts[0];
   useEffect(() => {
     const getPost = async () => {
       try {
@@ -48,7 +48,7 @@ const currentPost = posts[0];
     };
 
     getPost();
-  }, [pid, showToast,setPosts]);
+  }, [pid, showToast, setPosts]);
 
   if (!user && loading) {
     return (
@@ -109,11 +109,20 @@ const currentPost = posts[0];
       <Box
         borderRadius={6}
         overflow={"hidden"}
-        border={"1px soid"}
-        borderColor={"gray.light"}
+        border={"1px solid"} // Fixing the typo from "soid" to "solid"
+        borderColor={"gray.200"} // Changed "gray.light" to a more common gray.200, adjust as needed
       >
-        {currentPost.img && <Image src={currentPost.img} w={"full"} />}
+        {currentPost.img &&
+          (currentPost.img.endsWith(".mp4") ? (
+            <video controls width="100%">
+              <source src={currentPost.img} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <Image src={currentPost.img} w={"full"} />
+          ))}
       </Box>
+
       <Flex>
         <Actions post={currentPost} />
       </Flex>
@@ -130,15 +139,16 @@ const currentPost = posts[0];
         <Button>Get</Button>
       </Flex>
       <Divider my={3} />
-        {currentPost.replies.map(reply=>(
-
-          <Comment
-           key={reply._id} 
-           reply = {reply}
-
-           lastReply={reply._id === currentPost.replies[currentPost.replies.length - 1]._id}
-          />
-        ))}
+      {currentPost.replies.map((reply) => (
+        <Comment
+          key={reply._id}
+          reply={reply}
+          lastReply={
+            reply._id ===
+            currentPost.replies[currentPost.replies.length - 1]._id
+          }
+        />
+      ))}
     </>
   );
 };

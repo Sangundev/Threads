@@ -3,6 +3,8 @@ import User from "../models/userModel.js";
 import router from "../routes/postRoutes.js";
 import mongoose from "mongoose";
 import { v2 as cloudinary } from "cloudinary";
+import multer from "multer";
+const upload = multer(); // Initialize multer for handling multipart/form-data
 
 // Xem bài viết
 const getPost = async (req, res) => {
@@ -10,7 +12,7 @@ const getPost = async (req, res) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      return res.status(404).json({ message: "Post not found" });
+      return res.status(404 ).json({ message: "Post not found" });
     }
 
     res.status(200).json(post);
@@ -20,54 +22,119 @@ const getPost = async (req, res) => {
 };
 // Tạo bài viết
 
+// const createPost = async (req, res) => {
+//   try {
+//     // Extract the data from the request body
+//     const { postedBy, text, img } = req.body;
+
+//     // Ensure that required fields are provided
+//     // if (!postedBy || !text) {
+//     //   return res.status(400).json({ message: "Vui lòng kiểm tra lại thiếu thông tin bắt buộc" });
+//     // }
+
+//     if (!postedBy) {
+//       return res.status(400).json({ message: "Vui lòng kiểm tra lại thiếu thông tin bắt buộc" });
+//     }
+
+//     const user = await User.findById(postedBy);
+//     if (!user) {
+//       return res.status(404).json({ message: "Người dùng không tồn tại" });
+//     }
+
+//     // Assuming req.user._id is set from authentication middleware
+//     if (user._id.toString() !== req.user._id.toString()) {
+//       return res.status(401).json({ message: "Bạn không có quyền tạo bài viết" });
+//     }
+
+//     const maxLength = 500;
+//     if (text.length > maxLength) {
+//       return res.status(400).json({ message: `Ghi chú quá dài, tối đa ${maxLength} ký tự` });
+//     }
+
+//     let imageUrl = null;
+//     if (img) {
+//       const uploadedResponse = await cloudinary.uploader.upload(img);
+//       imageUrl = uploadedResponse.secure_url;
+//     }
+
+//     const newPost = new Post({
+//       postedBy,
+//       // text,
+//       text: text || "",
+//       img: imageUrl,
+//     });
+
+//     // Save the post to the database
+//     const savedPost = await newPost.save();
+
+//     // Log the saved post information to the console
+//     console.log("Post created successfully:", savedPost);
+
+//     // Send a successful response with the saved post data
+//     res.status(201).json(savedPost);
+//   } catch (message) {
+//     console.message(message);
+//     res.status(500).json({ message: "Lỗi máy chủ", details: message.message || message });
+//   }
+// };
+// Tạo bài viết
 const createPost = async (req, res) => {
   try {
-    // Extract the data from the request body
-    const { postedBy, text, img } = req.body;
+    upload.single("file")(req, res, async (err) => {
+      if (err) return res.status(400).json({ message: "Failed to upload file" });
+      
+      const { postedBy, text, mediaType } = req.body;
+      const file = req.file;
 
-    // Ensure that required fields are provided
-    if (!postedBy || !text) {
-      return res.status(400).json({ message: "Vui lòng kiểm tra lại thiếu thông tin bắt buộc" });
-    }
+      if (!postedBy) return res.status(400).json({ message: "Missing required information" });
 
-    const user = await User.findById(postedBy);
-    if (!user) {
-      return res.status(404).json({ message: "Người dùng không tồn tại" });
-    }
+      // Verify the user
+      const user = await User.findById(postedBy);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user._id.toString() !== req.user._id.toString()) {
+        return res.status(401).json({ message: "Unauthorized action" });
+      }
 
-    // Assuming req.user._id is set from authentication middleware
-    if (user._id.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Bạn không có quyền tạo bài viết" });
-    }
+      const maxLength = 500;
+      if (text && text.length > maxLength) {
+        return res.status(400).json({ message: `Text too long, maximum ${maxLength} characters allowed` });
+      }
 
-    const maxLength = 500;
-    if (text.length > maxLength) {
-      return res.status(400).json({ message: `Ghi chú quá dài, tối đa ${maxLength} ký tự` });
-    }
+      let mediaUrl = null;
+      if (file) {
+        const uploadOptions = { resource_type: mediaType === "video" ? "video" : "image" };
+        try {
+          // Use a promise to handle the upload completion before proceeding
+          mediaUrl = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+              if (error) {
+                console.error("Upload to Cloudinary failed:", error);
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
+            });
+            uploadStream.end(file.buffer);
+          });
+        } catch (uploadError) {
+          console.error("Cloudinary upload failed:", uploadError);
+          return res.status(500).json({ message: "Failed to upload media to Cloudinary", error: uploadError.message });
+        }
+      }
 
-    let imageUrl = null;
-    if (img) {
-      const uploadedResponse = await cloudinary.uploader.upload(img);
-      imageUrl = uploadedResponse.secure_url;
-    }
+      const newPost = new Post({
+        postedBy,
+        text: text || "",
+        img: mediaUrl, // Ensure mediaUrl is set here
+      });
 
-    const newPost = new Post({
-      postedBy,
-      text,
-      img: imageUrl,
+      const savedPost = await newPost.save();
+      console.log("Post created successfully:", savedPost);
+      res.status(201).json(savedPost);
     });
-
-    // Save the post to the database
-    const savedPost = await newPost.save();
-
-    // Log the saved post information to the console
-    console.log("Post created successfully:", savedPost);
-
-    // Send a successful response with the saved post data
-    res.status(201).json(savedPost);
-  } catch (message) {
-    console.message(message);
-    res.status(500).json({ message: "Lỗi máy chủ", details: message.message || message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", details: error.message || error });
   }
 };
 
