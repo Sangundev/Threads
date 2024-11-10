@@ -140,6 +140,33 @@ const createPost = async (req, res) => {
 
 
 // Xóa bài viết
+// const deletePost = async (req, res) => {
+//   try {
+//     const post = await Post.findById(req.params.id);
+//     if (!post) {
+//       return res.status(404).json({ message: "Bài viết không tồn tại" });
+//     }
+//     if (post.postedBy.toString() !== req.user._id.toString()) {
+//       return res
+//         .status(401)
+//         .json({ message: "Bạn không có quyền xóa bài viết" });
+//     }
+
+//     if(post.img){
+//       const imgId = post.img.split("/").pop().split(".")[0];
+//       await cloudinary.uploader.destroy(imgId);
+//     }
+
+//     await Post.findByIdAndDelete(req.params.id);
+
+//     res.status(200).json({ message: " Xóa bài viết thành công" });
+//   } catch (message) {
+//     console.message(message);
+//     res.status(500).json({ message: "Lỗi máy chủ", message: message.message });
+//   }
+// };
+
+
 const deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -147,24 +174,25 @@ const deletePost = async (req, res) => {
       return res.status(404).json({ message: "Bài viết không tồn tại" });
     }
     if (post.postedBy.toString() !== req.user._id.toString()) {
-      return res
-        .status(401)
-        .json({ message: "Bạn không có quyền xóa bài viết" });
+      return res.status(401).json({ message: "Bạn không có quyền xóa bài viết" });
     }
 
-    if(post.img){
+    if (post.img) {
       const imgId = post.img.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(imgId);
+      const mediaType = post.mediaType === "video" ? "video" : "image"; // Ensure resource type is correct
+      
+      // Delete the image or video from Cloudinary
+      await cloudinary.uploader.destroy(imgId, { resource_type: mediaType });
     }
 
     await Post.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({ message: " Xóa bài viết thành công" });
-  } catch (message) {
-    console.message(message);
-    res.status(500).json({ message: "Lỗi máy chủ", message: message.message });
+    res.status(200).json({ message: "Xóa bài viết thành công" });
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    res.status(500).json({ message: "Lỗi máy chủ", details: error.message });
   }
 };
+
 // Thích và bỏ thích bài viết
 const likeUnlikePost = async (req, res) => {
   try {

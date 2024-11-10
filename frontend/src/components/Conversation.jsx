@@ -8,20 +8,21 @@ import {
   useColorModeValue,
   WrapItem,
   useColorMode,
+  Box,
 } from "@chakra-ui/react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import userAtom from "../atoms/userAtom";
 import { BsCheck2All } from "react-icons/bs";
 import { selectedConversationAtom } from "../atoms/messageAtom";
 
-const Conversation = ({ conversation }) => {
-  const user = conversation.participants?.[0];
-  const lastMessage = conversation.lastMessage;
+const Conversation = ({ conversation, isOnline }) => {
+  const user = conversation?.participants?.[0];
+  const lastMessage = conversation?.lastMessage || {};  // Fallback in case of missing lastMessage
   const currentUser = useRecoilValue(userAtom);
-  const [selectedConversation, setselectedConversation] = useRecoilState(selectedConversationAtom);
+  const [selectedConversation, setSelectedConversation] = useRecoilState(selectedConversationAtom);
   const { colorMode } = useColorMode(); // Correct way to get colorMode
 
-  console.log("selectedConversation", selectedConversation);
+  const onlineBadgeColor = useColorModeValue("green.500", "green.300"); // Adjust online badge color based on color mode
 
   return (
     <Flex
@@ -33,13 +34,15 @@ const Conversation = ({ conversation }) => {
         bg: useColorModeValue("gray.200", "gray.700"),
         color: "white",
       }}
-      onClick={() => setselectedConversation({
-        _id: conversation._id,
-        userId: user._id,
-        userProfilePic: user.profilePic,
-        name: user.name,
-        mock: conversation.mock,
-      })}
+      onClick={() =>
+        setSelectedConversation({
+          _id: conversation._id,
+          userId: user._id,
+          userProfilePic: user.profilePic,
+          name: user.name,
+          mock: conversation.mock,
+        })
+      }
       bg={selectedConversation?._id === conversation._id ? (colorMode === "light" ? "gray.600" : "gray.800") : ""}
       borderRadius={"md"}
     >
@@ -52,7 +55,7 @@ const Conversation = ({ conversation }) => {
           }}
           src={user?.profilePic || "https://default-image-url.jpg"}
         >
-          <AvatarBadge boxSize={"1em"} bg={"green.500"} />
+          {isOnline && <AvatarBadge boxSize={"1em"} bg={onlineBadgeColor} />}
         </Avatar>
       </WrapItem>
 
@@ -63,8 +66,16 @@ const Conversation = ({ conversation }) => {
         </Text>
 
         <Text fontSize={"xs"} display={"flex"} alignItems={"center"} gap={1}>
-          {currentUser._id === lastMessage.sender ? <BsCheck2All size={16}/> : ""}
-          {lastMessage.text.length > 20 ? lastMessage.text.substring(0, 20) + "..." : lastMessage.text} {/* Fixed substring logic */}
+          {currentUser._id === lastMessage?.sender ? (
+            <Box color={lastMessage.seen ? "blue.400" : ""}>
+              <BsCheck2All size={16} />
+            </Box>
+          ) : ""}
+          {lastMessage?.text ? (
+            lastMessage.text.length > 20 ? lastMessage.text.substring(0, 20) + "..." : lastMessage.text
+          ) : (
+            "No messages yet"
+          )}
         </Text>
       </Stack>
     </Flex>

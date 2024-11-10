@@ -21,6 +21,7 @@ import {
   selectedConversationAtom,
 } from "../atoms/messageAtom";
 import userAtom from "../atoms/userAtom";
+import { useSocket } from "../context/SocketContext";
 
 const ChatPage = () => {
   const showToast = useShowToast();
@@ -32,7 +33,33 @@ const ChatPage = () => {
   const [seachText, setSeachText] = useState("");
   const [seachingUser, setSeachingUser] = useState(false);
   const currentUser = useRecoilValue(userAtom);
+  const {socket,onlineUser} = useSocket();
 
+  useEffect(() => {
+    socket?.on("messageSeen", ({ conversationId }) => {
+      setConversations((prev) => {
+        const updatedConversations = prev.map((conversation) => {
+          if (conversation._id === conversationId) {
+            return {
+              ...conversation,
+              lastMessage: {
+                ...conversation.lastMessage,
+                seen: true, // Mark the last message as seen
+              },
+            };
+          }
+          return conversation;
+        });
+        return updatedConversations;
+      });
+    });
+  
+    // Cleanup the socket listener when component unmounts or socket changes
+    return () => {
+      socket?.off("messageSeen");
+    };
+  }, [socket, setConversations]);
+  
 
   useEffect(() => {
     const getConversations = async () => {
@@ -198,6 +225,7 @@ const ChatPage = () => {
             conversations.map((conversation) => (
               <Conversation
                 key={conversation._id}
+                isOnline={onlineUser.includes(conversation.participants[0]._id)}
                 conversation={conversation}
               />
             ))}
