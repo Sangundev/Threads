@@ -1,12 +1,24 @@
-import { Avatar, Divider, Flex, Text, useColorModeValue, Skeleton, SkeletonCircle } from "@chakra-ui/react";
+import {
+  Avatar,
+  Divider,
+  Flex,
+  Text,
+  useColorModeValue,
+  Skeleton,
+  SkeletonCircle,
+} from "@chakra-ui/react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import { useEffect, useRef, useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 import userAtom from "../atoms/userAtom";
 import { useRecoilValue, useSetRecoilState } from "recoil";
-import { conversationsAtom, selectedConversationAtom } from "../atoms/messageAtom";
+import {
+  conversationsAtom,
+  selectedConversationAtom,
+} from "../atoms/messageAtom";
 import { useSocket } from "../context/SocketContext";
+import messageSound from "../../public/Sound/message.mp3";
 
 const MessageContainer = () => {
   const showToast = useShowToast();
@@ -25,8 +37,11 @@ const MessageContainer = () => {
       if (message.conversationId === selectedConversation?._id) {
         setMessages((prevMessages) => [...prevMessages, message]);
       }
+      if (!document.hasFocus()) {
+        const sound = new Audio(messageSound);
+        sound.play();
+      }
 
-      // Update the conversation's lastMessage if it matches the selected one
       setConversations((prevConversations) => {
         return prevConversations.map((conversation) => {
           if (conversation._id === selectedConversation?._id) {
@@ -84,7 +99,8 @@ const MessageContainer = () => {
   useEffect(() => {
     // Scroll to the bottom of the message container when new messages are added
     if (messageContainerRef.current) {
-      messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -160,9 +176,9 @@ const MessageContainer = () => {
               </Flex>
             ))
           : messages.map((message) => (
-               <Flex direction={"column"} key={message._id}>
-              <Message message={message} ownMessage={message.ownMessage} />
-            </Flex>
+              <Flex direction={"column"} key={message._id}>
+                <Message message={message} ownMessage={message.ownMessage} />
+              </Flex>
             ))}
       </Flex>
 

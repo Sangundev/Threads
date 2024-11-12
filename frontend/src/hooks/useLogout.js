@@ -3,7 +3,7 @@ import userAtom from '../atoms/userAtom';
 import useShowToast from './useShowToast';
 
 const useLogout = () => {
-    const [user, setUser] = useRecoilState(userAtom); // Sửa đổi để destructure state và setter
+    const [user, setUser] = useRecoilState(userAtom); 
     const showToast = useShowToast();
 
     const logout = async () => {

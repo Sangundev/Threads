@@ -9,11 +9,13 @@ const getUserProfile = async (req, res) => {
   const { query } = req.params;
   try {
     let user;
-    
+
     if (mongoose.Types.ObjectId.isValid(query)) {
       user = await User.findOne({ _id: query }).select("-password -updatedAt");
     } else {
-      user = await User.findOne({ username: query }).select("-password -updatedAt");
+      user = await User.findOne({ username: query }).select(
+        "-password -updatedAt"
+      );
     }
 
     if (!user) {
@@ -21,20 +23,21 @@ const getUserProfile = async (req, res) => {
     }
 
     // Check if the current user follows the fetched profile
-    const isFollowing = req.user ? user.followers.includes(req.user._id) : false;
+    const isFollowing = req.user
+      ? user.followers.includes(req.user._id)
+      : false;
     // console.log(isFollowing);
     res.json({
       ...user.toObject(),
-      isFollowing,  // Return following status
-      followersCount: user.followers.length,  // Total followers
-      followingCount: user.following.length,  // Total following
+      isFollowing, // Return following status
+      followersCount: user.followers.length, // Total followers
+      followingCount: user.following.length, // Total following
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
-
 
 //SignUp
 const signupUser = async (req, res) => {
@@ -92,6 +95,12 @@ const loginUser = async (req, res) => {
         .status(400)
         .json({ message: "Tài khoản hoặc mật khẩu không đúng" });
     }
+
+    if (user.isFrozen) {
+      user.isFrozen = false;
+      await user.save();
+    }
+
     generateTokenAndSetCookie(user._id, res);
     res.status(200).json({
       _id: user._id,
@@ -178,11 +187,14 @@ const updateUser = async (req, res) => {
 
   try {
     let user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "Người dùng không tồn tại" });
+    if (!user)
+      return res.status(404).json({ error: "Người dùng không tồn tại" });
 
     // Kiểm tra nếu người dùng muốn cập nhật tài khoản của người khác
     if (req.params.id !== userId.toString())
-      return res.status(403).json({ error: "Không thể cập nhật tài khoản của người khác" });
+      return res
+        .status(403)
+        .json({ error: "Không thể cập nhật tài khoản của người khác" });
 
     // Cập nhật mật khẩu nếu có
     if (password) {
@@ -217,17 +229,17 @@ const updateUser = async (req, res) => {
     // Cập nhật thông tin trong các bài viết mà người dùng đã bình luận
     await Post.updateMany(
       {
-        "replies.userId": userId
+        "replies.userId": userId,
       },
       {
         $set: {
           "replies.$[reply].username": user.username,
           "replies.$[reply].userProfilePic": user.profilePic,
           "replies.$[reply].name": user.name,
-        }
+        },
       },
       {
-        arrayFilters: [{ "reply.userId": userId }] // Thêm arrayFilters để chỉ cập nhật các reply của user hiện tại
+        arrayFilters: [{ "reply.userId": userId }], // Thêm arrayFilters để chỉ cập nhật các reply của user hiện tại
       }
     );
 
@@ -235,16 +247,96 @@ const updateUser = async (req, res) => {
     user.password = null;
 
     // Gửi phản hồi thành công
-    res.status(200).json(
-      user
-    );
+    res.status(200).json(user);
   } catch (error) {
     console.error("Error in updateUser:", error.message);
     res.status(500).json({ error: "Lỗi máy chủ", details: error.message });
   }
 };
 
+// const getsuggestedUsers = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
 
+//     // Lấy danh sách người dùng mà bạn đang theo dõi
+//     const usersFollowedByYou = await User.findById(userId).select("following");
+
+//     // Truy vấn người dùng chưa được bạn theo dõi và chọn ngẫu nhiên 10 người
+//     const users = await User.aggregate([
+//       {
+//         $match: {
+//           _id: { $ne: userId }, // Loại trừ chính bạn khỏi kết quả
+//         },
+//       },
+//       {
+//         $sample: { size: 10 }, // Lấy 10 người dùng ngẫu nhiên
+//       },
+//     ]);
+
+//     // Lọc ra những người chưa được bạn theo dõi
+//     const filteredUsers = users.filter(
+//       (user) => !usersFollowedByYou.following.includes(user._id.toString())
+//     );
+
+//     // Lấy 4 người dùng đầu tiên
+//     const suggestedUsers = filteredUsers.slice(0, 4);
+
+//     // Loại bỏ trường password khỏi mỗi người dùng
+//     const cleanedUsers = suggestedUsers.map(user => {
+//       const { password, ...userWithoutPassword } = user.toObject(); // Loại bỏ trường password
+//       return userWithoutPassword;
+//     });
+
+//     res.status(200).json(cleanedUsers);
+//   } catch (error) {
+//     console.error("Error in getsuggestedUsers:", error.message);
+//     res.status(500).json({ error: "Lỗi máy chủ", details: error.message });
+//   }
+// };
+const getSuggestedUsers = async (req, res) => {
+  try {
+    // exclude the current user from suggested users array and exclude users that current user is already following
+    const userId = req.user._id;
+
+    const usersFollowedByYou = await User.findById(userId).select("following");
+
+    const users = await User.aggregate([
+      {
+        $match: {
+          _id: { $ne: userId },
+        },
+      },
+      {
+        $sample: { size: 10 },
+      },
+    ]);
+    const filteredUsers = users.filter(
+      (user) => !usersFollowedByYou.following.includes(user._id)
+    );
+    const suggestedUsers = filteredUsers.slice(0, 4);
+
+    suggestedUsers.forEach((user) => (user.password = null));
+
+    res.status(200).json(suggestedUsers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const freezeAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    user.isFrozen = true;
+    await user.save();
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export {
   signupUser,
@@ -253,4 +345,6 @@ export {
   follownnfollowUser,
   updateUser,
   getUserProfile,
+  getSuggestedUsers,
+  freezeAccount,
 };

@@ -72,7 +72,8 @@ const Conversation = ({ conversation, isOnline }) => {
             </Box>
           ) : ""}
           {lastMessage?.text ? (
-            lastMessage.text.length > 20 ? lastMessage.text.substring(0, 20) + "..." : lastMessage.text
+            lastMessage.text.length > 20 ? lastMessage.text.substring(0, 20) +
+             "..." : lastMessage.text || "Hình ảnh"
           ) : (
             "No messages yet"
           )}

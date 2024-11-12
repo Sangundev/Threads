@@ -167,7 +167,7 @@ const MessageInput = ({ setMessages }) => {
                 <IconButton
                   icon={<IoSendSharp />}
                   onClick={handleSendMessage}
-                  aria-label="Send Message with Image"
+                  aria-label="Send Message with z"
                 />
               ) : (
                 <Spinner size={"md"} />

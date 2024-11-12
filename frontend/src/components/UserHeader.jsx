@@ -18,16 +18,14 @@ import { Link } from "react-router-dom";
 import { useRecoilValue } from "recoil"; // Added import for useRecoilValue
 import userAtom from "../atoms/userAtom"; // Adjust the path to your Recoil atom
 import { Link as RouterLink } from "react-router-dom";
-import { useState } from "react";
-import useShowToast from "../hooks/useShowToast";
+import useFollowUnfollow from "../hooks/useFollowUnfollow";
+
 
 const UserHeader = ({ user }) => {
   const toast = useToast();
   const currentUser = useRecoilValue(userAtom);
-  const [Following,setFollowing] = useState(user.followers.includes(currentUser?._id)); //);
-  // console.log(Following);
-  const [updating,setUpdating] = useState(false); //
-  const showToast = useShowToast();
+  const { handleFollowUnfollow, following, updating } = useFollowUnfollow(user);
+
 
   const CopyURL = async() => {
     const url = window.location.href;
@@ -54,44 +52,6 @@ const UserHeader = ({ user }) => {
       );
     });
   };
-
-  const handleFollowUnfollow = async () => {
-    if(!currentUser){
-      showToast("Error"," Please Login to follow");
-      return;
-    }
-    setUpdating(true);
-    try {
-      const res = await fetch(`/api/users/follow/${user._id}`, {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await res.json();
-      if(updating) return;
-      if (data.errors) {
-        showToast("Error: " + data.errors, "error");
-        return;
-      }
-      if (Following) {
-        showToast(`Success: Unfollowed ${user.name}`, "success");
-        user.followers.pop();
-      } else {
-        showToast(`Success: Followed ${user.name}`, "success");
-        user.followers.push(currentUser?._id); 
-      }
-      
-      setFollowing(!Following);
-      console.log(data);
-      showToast("Follow/Unfollow action successful", "success"); // Optional success toast
-    } catch (error) {
-      showToast("Error: " + error.message, "error");
-    }finally {
-      setUpdating(false);
-    }
-  };
-  
   return (
     <VStack gap={4} alignItems="start">
       <Flex justifyContent="space-between" w="full">
@@ -128,7 +88,7 @@ const UserHeader = ({ user }) => {
       )}
       {currentUser?._id !== user._id && <Button size="sm"
       onClick={handleFollowUnfollow} isLoading ={updating}>
-        {Following ? "unfollow" : "Follow"}
+        {following ? "unfollow" : "Follow"}
         </Button>}
 
       <Flex w="full" justifyContent="space-between">
